@@ -6,6 +6,7 @@
 #include <map>
 #include <string>
 #include <atomic>
+#include <mutex>
 using namespace std;
 
 /*
@@ -22,19 +23,34 @@ handling the cash register. The program is supposed to end after serving 50 peop
 const int num_barbers = 3;
 const int max_people = 20;
 const int couch_capacity = 4;
-const int people_served_threshold = 50;
+const int num_customers = 50;
 
-int counter_people_served = 0;
-bool is_barber_free[num_barbers];
+void serveCustomer(int barber);
+void barberJob();
+void customerJob();
 
+//Mutexes neccesary for multithread synchronization
+mutex waitingRoomMutex;
+mutex couchMutex;
+mutex barbersMutex[num_barbers];
 
+atomic<int> counterPeopleServed(0); // Atomic variable playing a role of the counter
+bool isBarberFree[num_barbers];
 
-queue<int> waiting_room; // queue with clients' ids
-
+queue<int> waitingRoom; // queue with clients' ids representing waiting room
+queue<int> couch; // queue with clients' ids representing couch
 
 
 int main()
 {
-    printf("hello from %s!\n", "MultithreadingProject");
+    cout << "Opening the barber shop..." << endl;
+
+    // Initialazing threads
+    thread barbers[num_barbers];
+    thread customers[num_customers];
+
+    // Creating threads that are associated with barbers and customers and assigning IDs to them
+
+
     return 0;
 }
