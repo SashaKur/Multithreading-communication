@@ -25,9 +25,9 @@ const int max_people = 20;
 const int couch_capacity = 4;
 const int num_customers = 50;
 
-void serveCustomer(int barber);
-void barberJob();
-void customerJob();
+void serveCustomer(int barberId);
+void barberJob(int barberId);
+void customerJob(int customerId);
 
 //Mutexes neccesary for multithread synchronization
 mutex waitingRoomMutex;
@@ -50,7 +50,23 @@ int main()
     thread customers[num_customers];
 
     // Creating threads that are associated with barbers and customers and assigning IDs to them
+    for (int i = 0; i < num_barbers; i++) {
+        barbers[i] = thread(barberJob, i); 
+    }
+    for (int i = 0; i < num_customers; i++) {
+        customers[i] = thread(customerJob, i);
+        this_thread::sleep_for(chrono::seconds(rand() % 5)); // Random arrival time with 1 to 5 seconds inbetween
+    }
+
 
 
     return 0;
+}
+
+void customerJob(int customerId) {
+
+}
+
+void barberJob(int barberId) {
+
 }
