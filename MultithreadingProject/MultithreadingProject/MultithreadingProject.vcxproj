@@ -76,6 +76,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="zso-project2.cpp" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
