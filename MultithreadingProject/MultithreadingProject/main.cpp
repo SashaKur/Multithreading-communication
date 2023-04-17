@@ -44,7 +44,7 @@ condition_variable barberC[num_barbers];
 condition_variable cashRegisterC;
 
 atomic<int> counterPeopleServed(0); // Atomic variable playing a role of the counter
-bool isBarberFree[num_barbers];
+bool isBarbershopClosed = false;
 
 queue<int> waitingRoom; // queue with clients' ids representing waiting room
 queue<int> couch; // queue with clients' ids representing couch
@@ -79,8 +79,9 @@ int main()
         this_thread::sleep_for(chrono::seconds(1));
     }
 
+
+    isBarbershopClosed = true;
     for (int i = 0; i < num_barbers; i++) {
-        barberC[i].notify_one();
         barbers[i].join();
     }
 
@@ -106,21 +107,18 @@ void customerJob(int customerId) {
 
     unique_lock<mutex> lockForCouch(couchMutex);
     while (couch.size() >= couch_capacity || customerId != waitingRoom.front()) {
-        cout << "Couch is full" << endl;
         couchC.wait(lockForCouch);
     }
 
-
-    lockForWaiting.lock();
+    lockForWaiting.lock();    // Locking waiting room for safe access to memory in order to transfer client from waiting room to the couch
     waitingRoom.pop();
 
-    // Locking waiting room for safe access to memory in order to transfer client from waiting room to the couch
     lockForWaiting.unlock();
 
     couch.push(customerId);
 
     if (waitingRoom.size() < waiting_room_capacity)
-        waitingRoomC.notify_all();
+        waitingRoomC.notify_one();
 
     cout << "Customer is now sitting on the couch, ID: " << customerId << endl;
 
@@ -131,11 +129,12 @@ void customerJob(int customerId) {
 
 void barberJob(int barberId) {
 
-    while (true) {
+    while (!isBarbershopClosed) {
         unique_lock<mutex> lockForCouch(couchMutex);
 
         if (couch.empty()) {
             lockForCouch.unlock();
+            cout << "Barber is sleeping... (ID: " << barberId << ")" << endl;
             this_thread::sleep_for(chrono::milliseconds(250));
             continue;
         }
@@ -170,6 +169,6 @@ void barberJob(int barberId) {
         cashRegisterC.notify_one();
 
         cout << "Customer is leaving the barber shop (ID: " << customerId << ")." << endl;
-
+        ++counterPeopleServed;
     }
 }
