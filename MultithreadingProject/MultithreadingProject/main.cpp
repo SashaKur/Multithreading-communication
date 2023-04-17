@@ -35,16 +35,17 @@ void customerJob(int customerId);
 //Mutexes neccesary for multithread synchronization
 mutex waitingRoomMutex;
 mutex couchMutex;
-mutex barbersMutex[num_barbers];
 mutex cashRegisterMutex;
+mutex signalMutex;
 
 condition_variable waitingRoomC;
 condition_variable couchC;
-condition_variable barberC[num_barbers];
-condition_variable cashRegisterC;
+
+
 
 atomic<int> counterPeopleServed(0); // Atomic variable playing a role of the counter
 bool isBarbershopClosed = false;
+map<int, bool> signalCustomerToLeave;
 
 queue<int> waitingRoom; // queue with clients' ids representing waiting room
 queue<int> couch; // queue with clients' ids representing couch
@@ -65,7 +66,8 @@ int main()
     }
     for (int i = 0; i < num_customers; i++) {
         customers[i] = thread(customerJob, i);
-        this_thread::sleep_for(chrono::milliseconds(1)); // 1 customer per second
+        signalCustomerToLeave[i] = false;
+        this_thread::sleep_for(chrono::milliseconds(200)); // 1 customer per 1/5 of a second
     }
 
 
@@ -124,6 +126,12 @@ void customerJob(int customerId) {
 
     lockForCouch.unlock();
 
+    while (true) {
+        if (signalCustomerToLeave[customerId]) {
+            cout << "Customer is leaving the barber shop (ID: " << customerId << ")." << endl;
+            return;
+        }
+    }
 
 }
 
@@ -152,23 +160,20 @@ void barberJob(int barberId) {
         this_thread::sleep_for(chrono::milliseconds(300));
 
         unique_lock<mutex> lockForRegister(cashRegisterMutex);
-        while (cashRegister != -1) {
-            lockForRegister.unlock();
-            cashRegisterC.wait(lockForRegister);
-        }
 
         cout << "Moving customer to the cash register (ID customer: " << customerId << "; ID barber: " << barberId << ")." << endl;
         cashRegister = customerId;
 
-        cout << "Customer is paying..." << endl;
+        cout << "Customer is paying... (ID: " << customerId << ")" << endl;
         this_thread::sleep_for(chrono::milliseconds(100));
 
         cashRegister = -1;
 
         lockForRegister.unlock();
-        cashRegisterC.notify_one();
 
-        cout << "Customer is leaving the barber shop (ID: " << customerId << ")." << endl;
+        unique_lock<mutex> lockForMap(signalMutex);
+        signalCustomerToLeave[customerId] = true;
+
         ++counterPeopleServed;
     }
 }
